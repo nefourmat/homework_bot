@@ -1,31 +1,31 @@
 import logging
-import sys
 import time
 from http import HTTPStatus
 
 import requests
 import telegram
 
-from exceptions import InvalidTokens
-from settings import (ABSENCE_ENVIRONMENT_VARIABLES, ABSENCE_HW_KEY,
-                      ABSENCE_HWORKS_KEY, ALL_TOKENS_WAS_RECEIVED, ENDPOINT,
-                      ERROR_ENVIRONMENT_VARIABLES, FAILED_DECODE_IN_JSON,
-                      HEADERS, HOMEWORK_VERDICTS, INVALIDJSON,
-                      LAST_FRONTIER_ERROR_MESSAGE, NEW_CHECK_HW,
-                      PRACTICUM_TOKEN, REQUEST_ERROR_MESSAGE, RETRY_PERIOD,
-                      SUCCESSFUL_TELEGRAM_MESSAGE, TELEGRAM_CHAT_ID,
-                      TELEGRAM_TOKEN, TYPEERROR, UNKNOW_HW_STATUS,
-                      WORK_STATUS_CHANGED)
+from exceptions import (
+    InvalidTokens, ResponseErrorException,
+    InvalidResponseCode
+)
+from settings import (
+    ABSENCE_ENVIRONMENT_VARIABLES, ABSENCE_HOMEWORK_KEY,
+    ABSENCE_HOMEWORKS_KEY, ALL_TOKENS_WAS_RECEIVED, ENDPOINT,
+    ERROR_ENVIRONMENT_VARIABLES,
+    HEADERS, HOMEWORK_VERDICTS,
+    LAST_FRONTIER_ERROR_MESSAGE, NEW_CHECK_HOMEWORK,
+    REQUEST_ERROR_MESSAGE, RETRY_PERIOD,
+    SUCCESSFUL_TELEGRAM_MESSAGE, TELEGRAM_CHAT_ID,
+    TELEGRAM_TOKEN, TYPEERROR, UNKNOW_HW_STATUS,
+    WORK_STATUS_CHANGED, TOKENS, JSON_ERROR,
+    FILED_SEND_MESSAGE
+)
 
 
 def check_tokens() -> bool:
     """Проверка токенов."""
-    tokens = (
-        ('PRACTICUM_TOKEN', PRACTICUM_TOKEN),
-        ('TELEGRAM_TOKEN', TELEGRAM_TOKEN),
-        ('TELEGRAM_CHAT_ID', TELEGRAM_CHAT_ID),
-    )
-    for token, value in tokens:
+    for token, value in TOKENS:
         if not value:
             logging.critical(
                 ABSENCE_ENVIRONMENT_VARIABLES.format(token)
@@ -41,7 +41,7 @@ def send_message(bot, message) -> None:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logging.debug(SUCCESSFUL_TELEGRAM_MESSAGE.format(message))
     except Exception as error:
-        logging.error(error, exc_info=True)
+        logging.error(FILED_SEND_MESSAGE.format(message, error), exc_info=True)
 
 
 def get_api_answer(timestamp) -> dict:
@@ -51,21 +51,19 @@ def get_api_answer(timestamp) -> dict:
         'headers': HEADERS,
         'params': {'from_date': timestamp}
     }
-    try:
-        homework_statuses = requests.get(**request_data)
-        if homework_statuses.status_code != HTTPStatus.OK:
-            raise requests.exceptions.HTTPError(
-                f'Ошибка. Статус код: {homework_statuses.status_code}')
-    except requests.RequestException as error:
-        raise ConnectionError(
+    homework_statuses = requests.get(**request_data)
+    if homework_statuses.status_code != HTTPStatus.OK:
+        raise InvalidResponseCode(
             REQUEST_ERROR_MESSAGE.format(
-                exception=error, **request_data)
+                error=homework_statuses.status_code, **request_data)
         )
-    try:
-        homeworks_json = homework_statuses.json()
-    except requests.JSONDecodeError as e:
-        raise ConnectionError(
-            FAILED_DECODE_IN_JSON.format(homework_statuses, e))
+    homeworks_json = homework_statuses.json()
+    for key in ['error', 'code']:
+        if key in homeworks_json:
+            logging.debug(homeworks_json[key])
+            raise ResponseErrorException(
+                JSON_ERROR.format
+                (error=homeworks_json[key], key=key, **request_data))
     return homeworks_json
 
 
@@ -74,11 +72,11 @@ def check_response(response) -> list:
     if not isinstance(response, dict):
         raise TypeError(TYPEERROR.format(type(response)))
     if 'homeworks' not in response:
-        raise KeyError(ABSENCE_HWORKS_KEY)
+        raise KeyError(ABSENCE_HOMEWORKS_KEY)
     homeworks = response.get('homeworks')
     if not isinstance(homeworks, list):
-        raise TypeError(TYPEERROR.format(type(response)))
-    logging.debug(NEW_CHECK_HW.format(len(homeworks)))
+        raise TypeError(TYPEERROR.format(type(homeworks)))
+    logging.debug(NEW_CHECK_HOMEWORK.format(len(homeworks)))
     return homeworks
 
 
@@ -90,62 +88,54 @@ def parse_status(homework) -> str:
     ]
     for key in homework_keys:
         if key not in homework:
-            raise KeyError(ABSENCE_HW_KEY.format(key))
+            raise KeyError(ABSENCE_HOMEWORK_KEY.format(key))
     homework_name = homework.get('homework_name')
     current_status = homework.get('status')
     if current_status not in HOMEWORK_VERDICTS:
-        raise KeyError(UNKNOW_HW_STATUS.format(current_status))
-    if current_status is None:
-        raise requests.exceptions.InvalidJSONError(INVALIDJSON)
-    verdict = HOMEWORK_VERDICTS.get(homework.get('status'))
-    return WORK_STATUS_CHANGED.format(homework_name, verdict)
+        raise ValueError(UNKNOW_HW_STATUS.format(current_status))
+    return WORK_STATUS_CHANGED.format(
+        homework_name, HOMEWORK_VERDICTS.get(homework.get('status'))
+    )
 
 
 def main() -> None:
-    """Основная логика работы бота.
-    Обрабаываем исключения, при повторном одинаковой ошибки мы сообщение
-    не отправляем
-    """
-    if not check_tokens():
-        sys.exit(ERROR_ENVIRONMENT_VARIABLES)
+    """Основная логика работы бота."""
+    check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
-    previous_error = None
+    previous_error = ''
     while True:
         try:
             request = get_api_answer(timestamp)
-            timestamp = request.get('current_date')
-            get_homeworks = check_response(request)
-            if get_homeworks:
-                homework_verdict = parse_status(get_homeworks[0])
+            homeworks = check_response(request)
+            if homeworks:
+                homework_verdict = parse_status(homeworks[0])
                 send_message(bot=bot, message=homework_verdict)
+                timestamp = request.get('current_date', timestamp)
         except Exception as error:
             message = LAST_FRONTIER_ERROR_MESSAGE.format(error)
-            if not isinstance(previous_error, type(error)):
+            logging.error(message)
+            if str(previous_error) != str(error):
                 send_message(bot=bot, message=message)
-                logging.error(message)
-            previous_error = error
+                previous_error = error
         finally:
             time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
     logging.basicConfig(
         level=logging.DEBUG,
-        filename=__file__ + '.log',
         format=(
             '%(asctime)s [%(levelname)s] | '
             '%(funcName)s:%(lineno)d | %(message)s'
         ),
-        encoding='UTF-8',
-        filemode='w'
+        handlers=[
+            logging.FileHandler(
+                __file__ + '.log', mode='w', encoding='UTF-8',
+            ),
+            logging.StreamHandler()],
     )
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '[%(levelname)s] | %(funcName)s:%(lineno)d | %(message)s')
-    console_handler.setFormatter(formatter)
-    logging.getLogger('').addHandler(console_handler)
-    logger = logging.getLogger(__name__)
     logging.getLogger('urllib3').setLevel('CRITICAL')
     main()

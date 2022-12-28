@@ -25,15 +25,28 @@ REQUEST_ERROR_MESSAGE = '''
     {url}
     Заголовок запроса: {headers}
     Параметры запроса: {params}
-    {exception}
+    Код статуса: {error}
     '''.strip()
 WORK_STATUS_CHANGED = 'Изменился статус проверки работы "{}". {}'
 TYPEERROR = 'Неверный формат данных,функ.вернула {}'
-SUCCESSFUL_TELEGRAM_MESSAGE = 'Успешная отправка сообщения: {}'
+SUCCESSFUL_TELEGRAM_MESSAGE = 'Успешная отправка сообщения: "{}"'
 FAILED_DECODE_IN_JSON = 'Не удалось раскодировать {} в json. Ошибка: {}'
-ABSENCE_HW_KEY = 'В домашней работе нет ключа {}'
-ABSENCE_HWORKS_KEY = "Отсутсвутет ключ 'homeworks'"
+ABSENCE_HOMEWORK_KEY = 'В домашней работе нет ключа {}'
+ABSENCE_HOMEWORKS_KEY = "Отсутсвутет ключ 'homeworks'"
 UNKNOW_HW_STATUS = 'Неизвестный статус домашки {}'
 INVALIDJSON = 'Произошла ошибка JSON: {}'
-NEW_CHECK_HW = 'Проверено новых домашек: {}'
+NEW_CHECK_HOMEWORK = 'Проверено новых домашек: {}'
 LAST_FRONTIER_ERROR_MESSAGE = 'Сбой в работе программы: {}'
+TOKENS = (
+    ('PRACTICUM_TOKEN', PRACTICUM_TOKEN),
+    ('TELEGRAM_TOKEN', TELEGRAM_TOKEN),
+    ('TELEGRAM_CHAT_ID', TELEGRAM_CHAT_ID),
+)
+JSON_ERROR = '''
+    'Ошибка в json: {error}
+    Ключ: {key}
+    Адрес: {url}
+    Заголовок запроса: {headers}
+    Параметры запроса: {params}'
+    '''
+FILED_SEND_MESSAGE = 'Не удалось отправить сообщение"{}" ошибка "{}"'
