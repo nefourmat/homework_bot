@@ -11,7 +11,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 ALL_TOKENS_WAS_RECEIVED = 'Все токены успешно получены'
-ABSENCE_ENVIRONMENT_VARIABLES = 'Отсутствие переменных окружения {}'
+ABSENCE_ENVIRONMENT_VARIABLES = 'Отсутствие переменных окружения'
 ERROR_ENVIRONMENT_VARIABLES = 'Ошибка переменных окружения'
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'

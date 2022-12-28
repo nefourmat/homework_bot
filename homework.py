@@ -18,17 +18,23 @@ from settings import (
     REQUEST_ERROR_MESSAGE, RETRY_PERIOD,
     SUCCESSFUL_TELEGRAM_MESSAGE, TELEGRAM_CHAT_ID,
     TELEGRAM_TOKEN, TYPEERROR, UNKNOW_HW_STATUS,
-    WORK_STATUS_CHANGED, TOKENS, JSON_ERROR,
-    FILED_SEND_MESSAGE
+    WORK_STATUS_CHANGED, JSON_ERROR,
+    FILED_SEND_MESSAGE, PRACTICUM_TOKEN
 )
+TOKENS = (
+    ('PRACTICUM_TOKEN', PRACTICUM_TOKEN),
+    ('TELEGRAM_TOKEN', TELEGRAM_TOKEN),
+    ('TELEGRAM_CHAT_ID', TELEGRAM_CHAT_ID),
+)
+T = (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
 
 
 def check_tokens() -> bool:
     """Проверка токенов."""
-    for token, value in TOKENS:
+    for value in (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID):
         if not value:
             logging.critical(
-                ABSENCE_ENVIRONMENT_VARIABLES.format(token)
+                ABSENCE_ENVIRONMENT_VARIABLES
             )
             raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES)
     logging.debug(ALL_TOKENS_WAS_RECEIVED)
@@ -51,11 +57,18 @@ def get_api_answer(timestamp) -> dict:
         'headers': HEADERS,
         'params': {'from_date': timestamp}
     }
-    homework_statuses = requests.get(**request_data)
-    if homework_statuses.status_code != HTTPStatus.OK:
-        raise InvalidResponseCode(
+    try:
+        homework_statuses = requests.get(**request_data)
+        if homework_statuses.status_code != HTTPStatus.OK:
+            raise InvalidResponseCode(
+                REQUEST_ERROR_MESSAGE.format(
+                    error=homework_statuses.status_code, **request_data)
+            )
+    #  тесты не пропускают без RequestException
+    except requests.RequestException as error:
+        raise ConnectionError(
             REQUEST_ERROR_MESSAGE.format(
-                error=homework_statuses.status_code, **request_data)
+                exception=error, **request_data)
         )
     homeworks_json = homework_statuses.json()
     for key in ['error', 'code']:
@@ -100,7 +113,8 @@ def parse_status(homework) -> str:
 
 def main() -> None:
     """Основная логика работы бота."""
-    check_tokens()
+    if not check_tokens():
+        sys.exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     previous_error = ''
