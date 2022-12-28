@@ -113,7 +113,7 @@ def parse_status(homework) -> str:
 
 def main() -> None:
     """Основная логика работы бота."""
-    check_tokens():
+    check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     previous_error = ''
@@ -136,8 +136,6 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
     logging.basicConfig(
         level=logging.DEBUG,
         format=(
