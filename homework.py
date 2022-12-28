@@ -113,8 +113,7 @@ def parse_status(homework) -> str:
 
 def main() -> None:
     """Основная логика работы бота."""
-    if not check_tokens():
-        sys.exit()
+    check_tokens():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     previous_error = ''
