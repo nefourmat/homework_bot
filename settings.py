@@ -13,9 +13,6 @@ HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 ALL_TOKENS_WAS_RECEIVED = 'Все токены успешно получены'
 ABSENCE_ENVIRONMENT_VARIABLES = '''
     Отсутствие переменных окружения.
-    1. {PRACTICUM_TOKEN}
-    2. {TELEGRAM_TOKEN}
-    3. {TELEGRAM_CHAT_ID}
     Пробущен токен: {missing_token}
 '''
 

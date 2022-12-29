@@ -34,21 +34,20 @@ def check_tokens() -> bool:
     for name, value in tokens.items():
         if not value:
             logging.critical(
-                ABSENCE_ENVIRONMENT_VARIABLES.format(
-                    **tokens, missing_token=name)
+                ABSENCE_ENVIRONMENT_VARIABLES.format(missing_token=name)
             )
             raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES.format(name))
     logging.debug(ALL_TOKENS_WAS_RECEIVED)
 
 
-def send_message(bot, message) -> None:
+def send_message(bot, message) -> True:
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logging.debug(SUCCESSFUL_TELEGRAM_MESSAGE.format(message))
+        return True
     except Exception as error:
         logging.error(FILED_SEND_MESSAGE.format(message, error), exc_info=True)
-        raise TelegramBadRequest(FILED_SEND_MESSAGE.format(message, error))
 
 
 def get_api_answer(timestamp) -> dict:
@@ -60,7 +59,6 @@ def get_api_answer(timestamp) -> dict:
     }
     try:
         homework_statuses = requests.get(**request_data)
-    #  тесты не пропускают без RequestException
     except requests.RequestException as error:
         raise ConnectionError(
             REQUEST_ERROR_MESSAGE.format(
@@ -108,7 +106,7 @@ def parse_status(homework) -> str:
         raise ValueError(UNKNOW_HOMEWORK_STATUS.format(current_status))
     return WORK_STATUS_CHANGED.format(
         homework['homework_name'], HOMEWORK_VERDICTS.get(
-            homework.get('status'))
+            current_status)
     )
 
 
@@ -124,13 +122,14 @@ def main() -> None:
             homeworks = check_response(request)
             if homeworks:
                 homework_verdict = parse_status(homeworks[0])
-                if send_message(bot=bot, message=homework_verdict) is None:
+                if send_message(bot=bot, message=homework_verdict) is True:
                     timestamp = request.get('current_date', timestamp)
+                    logging.debug(f'Время {timestamp}')
         except Exception as error:
             message = LAST_FRONTIER_ERROR_MESSAGE.format(error)
             logging.error(message)
             if str(previous_error) != error:
-                if send_message(bot=bot, message=message) is None:
+                if send_message(bot=bot, message=message) is True:
                     previous_error = error
         finally:
             time.sleep(RETRY_PERIOD)
