@@ -7,7 +7,7 @@ import telegram
 
 from exceptions import (
     InvalidTokens, ResponseErrorException,
-    InvalidResponseCode
+    InvalidResponseCode, TelegramBadRequest
 )
 from settings import (
     ABSENCE_ENVIRONMENT_VARIABLES, ABSENCE_HOMEWORK_KEY,
@@ -17,28 +17,28 @@ from settings import (
     LAST_FRONTIER_ERROR_MESSAGE, NEW_CHECK_HOMEWORK,
     REQUEST_ERROR_MESSAGE, RETRY_PERIOD,
     SUCCESSFUL_TELEGRAM_MESSAGE, TELEGRAM_CHAT_ID,
-    TELEGRAM_TOKEN, TYPEERROR, UNKNOW_HW_STATUS,
+    TELEGRAM_TOKEN, TYPE_ERROR, UNKNOW_HOMEWORK_STATUS,
     WORK_STATUS_CHANGED, JSON_ERROR,
     FILED_SEND_MESSAGE, PRACTICUM_TOKEN
 )
-TOKENS = (
-    ('PRACTICUM_TOKEN', PRACTICUM_TOKEN),
-    ('TELEGRAM_TOKEN', TELEGRAM_TOKEN),
-    ('TELEGRAM_CHAT_ID', TELEGRAM_CHAT_ID),
-)
-T = (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
 
 
 def check_tokens() -> bool:
     """Проверка токенов."""
-    for value in (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID):
+    tokens = {
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
+
+    }
+    for name, value in tokens.items():
         if not value:
             logging.critical(
-                ABSENCE_ENVIRONMENT_VARIABLES
+                ABSENCE_ENVIRONMENT_VARIABLES.format(
+                    **tokens, missing_token=name)
             )
-            raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES)
+            raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES.format(name))
     logging.debug(ALL_TOKENS_WAS_RECEIVED)
-    return True
 
 
 def send_message(bot, message) -> None:
@@ -48,6 +48,7 @@ def send_message(bot, message) -> None:
         logging.debug(SUCCESSFUL_TELEGRAM_MESSAGE.format(message))
     except Exception as error:
         logging.error(FILED_SEND_MESSAGE.format(message, error), exc_info=True)
+        raise TelegramBadRequest(FILED_SEND_MESSAGE.format(message, error))
 
 
 def get_api_answer(timestamp) -> dict:
@@ -58,17 +59,17 @@ def get_api_answer(timestamp) -> dict:
         'params': {'from_date': timestamp}
     }
     try:
-        homework_statuses = requests.get(**request_data)
-        if homework_statuses.status_code != HTTPStatus.OK:
-            raise InvalidResponseCode(
-                REQUEST_ERROR_MESSAGE.format(
-                    error=homework_statuses.status_code, **request_data)
-            )
+        homework_statuses = requests.get(**request_data)  
     #  тесты не пропускают без RequestException
     except requests.RequestException as error:
         raise ConnectionError(
             REQUEST_ERROR_MESSAGE.format(
                 exception=error, **request_data)
+        )
+    if homework_statuses.status_code != HTTPStatus.OK:
+        raise InvalidResponseCode(
+            REQUEST_ERROR_MESSAGE.format(
+                error=homework_statuses.status_code, **request_data)
         )
     homeworks_json = homework_statuses.json()
     for key in ['error', 'code']:
@@ -83,12 +84,12 @@ def get_api_answer(timestamp) -> dict:
 def check_response(response) -> list:
     """Проверка ответ API на соответствие."""
     if not isinstance(response, dict):
-        raise TypeError(TYPEERROR.format(type(response)))
+        raise TypeError(TYPE_ERROR.format(type(response)))
     if 'homeworks' not in response:
         raise KeyError(ABSENCE_HOMEWORKS_KEY)
-    homeworks = response.get('homeworks')
+    homeworks = response['homeworks']
     if not isinstance(homeworks, list):
-        raise TypeError(TYPEERROR.format(type(homeworks)))
+        raise TypeError(TYPE_ERROR.format(type(homeworks)))
     logging.debug(NEW_CHECK_HOMEWORK.format(len(homeworks)))
     return homeworks
 
@@ -102,12 +103,12 @@ def parse_status(homework) -> str:
     for key in homework_keys:
         if key not in homework:
             raise KeyError(ABSENCE_HOMEWORK_KEY.format(key))
-    homework_name = homework.get('homework_name')
-    current_status = homework.get('status')
+    current_status = homework['status']
     if current_status not in HOMEWORK_VERDICTS:
-        raise ValueError(UNKNOW_HW_STATUS.format(current_status))
+        raise ValueError(UNKNOW_HOMEWORK_STATUS.format(current_status))
     return WORK_STATUS_CHANGED.format(
-        homework_name, HOMEWORK_VERDICTS.get(homework.get('status'))
+        homework['homework_name'], HOMEWORK_VERDICTS.get(
+            homework.get('status'))
     )
 
 
@@ -123,14 +124,14 @@ def main() -> None:
             homeworks = check_response(request)
             if homeworks:
                 homework_verdict = parse_status(homeworks[0])
-                send_message(bot=bot, message=homework_verdict)
-                timestamp = request.get('current_date', timestamp)
+                if send_message(bot=bot, message=homework_verdict) is None:
+                    timestamp = request.get('current_date', timestamp)
         except Exception as error:
             message = LAST_FRONTIER_ERROR_MESSAGE.format(error)
             logging.error(message)
-            if str(previous_error) != str(error):
-                send_message(bot=bot, message=message)
-                previous_error = error
+            if str(previous_error) != error:
+                if send_message(bot=bot, message=message) is None:
+                    previous_error = error
         finally:
             time.sleep(RETRY_PERIOD)
 

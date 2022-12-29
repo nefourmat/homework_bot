@@ -11,8 +11,15 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 ALL_TOKENS_WAS_RECEIVED = 'Все токены успешно получены'
-ABSENCE_ENVIRONMENT_VARIABLES = 'Отсутствие переменных окружения'
-ERROR_ENVIRONMENT_VARIABLES = 'Ошибка переменных окружения'
+ABSENCE_ENVIRONMENT_VARIABLES = '''
+    Отсутствие переменных окружения.
+    1. {PRACTICUM_TOKEN}
+    2. {TELEGRAM_TOKEN}
+    3. {TELEGRAM_CHAT_ID}
+    Пробущен токен: {missing_token}
+'''
+
+ERROR_ENVIRONMENT_VARIABLES = 'Ошибка переменных окружения {}'
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HOMEWORK_VERDICTS = {
@@ -28,12 +35,12 @@ REQUEST_ERROR_MESSAGE = '''
     Код статуса: {error}
     '''.strip()
 WORK_STATUS_CHANGED = 'Изменился статус проверки работы "{}". {}'
-TYPEERROR = 'Неверный формат данных,функ.вернула {}'
+TYPE_ERROR = 'Неверный формат данных,функ.вернула {}'
 SUCCESSFUL_TELEGRAM_MESSAGE = 'Успешная отправка сообщения: "{}"'
 FAILED_DECODE_IN_JSON = 'Не удалось раскодировать {} в json. Ошибка: {}'
 ABSENCE_HOMEWORK_KEY = 'В домашней работе нет ключа {}'
 ABSENCE_HOMEWORKS_KEY = "Отсутсвутет ключ 'homeworks'"
-UNKNOW_HW_STATUS = 'Неизвестный статус домашки {}'
+UNKNOW_HOMEWORK_STATUS = 'Неизвестный статус домашки {}'
 INVALIDJSON = 'Произошла ошибка JSON: {}'
 NEW_CHECK_HOMEWORK = 'Проверено новых домашек: {}'
 LAST_FRONTIER_ERROR_MESSAGE = 'Сбой в работе программы: {}'

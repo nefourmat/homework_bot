@@ -9,3 +9,7 @@ class ResponseErrorException(Exception):
 
 class InvalidResponseCode(Exception):
     pass
+
+
+class TelegramBadRequest(Exception):
+    pass
