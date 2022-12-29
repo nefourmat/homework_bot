@@ -7,7 +7,7 @@ import telegram
 
 from exceptions import (
     InvalidTokens, ResponseErrorException,
-    InvalidResponseCode, TelegramBadRequest
+    InvalidResponseCode
 )
 from settings import (
     ABSENCE_ENVIRONMENT_VARIABLES, ABSENCE_HOMEWORK_KEY,
