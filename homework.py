@@ -59,7 +59,7 @@ def get_api_answer(timestamp) -> dict:
         'params': {'from_date': timestamp}
     }
     try:
-        homework_statuses = requests.get(**request_data)  
+        homework_statuses = requests.get(**request_data)
     #  тесты не пропускают без RequestException
     except requests.RequestException as error:
         raise ConnectionError(
