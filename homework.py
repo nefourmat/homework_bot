@@ -29,18 +29,15 @@ def check_tokens() -> bool:
         'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
         'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
-
     }
-    for name, value in tokens.items():
-        if not value:
-            logging.critical(
-                ABSENCE_ENVIRONMENT_VARIABLES.format(missing_token=name)
-            )
-            raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES.format(name))
+    miss = [name for name, v in tokens.items() if not v]
+    if miss:
+        logging.critical(ABSENCE_ENVIRONMENT_VARIABLES.format(miss))
+        raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES.format(miss))
     logging.debug(ALL_TOKENS_WAS_RECEIVED)
 
 
-def send_message(bot, message) -> True:
+def send_message(bot, message) -> bool:
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
@@ -48,6 +45,7 @@ def send_message(bot, message) -> True:
         return True
     except Exception as error:
         logging.error(FILED_SEND_MESSAGE.format(message, error), exc_info=True)
+        return False
 
 
 def get_api_answer(timestamp) -> dict:
@@ -105,14 +103,14 @@ def parse_status(homework) -> str:
     if current_status not in HOMEWORK_VERDICTS:
         raise ValueError(UNKNOW_HOMEWORK_STATUS.format(current_status))
     return WORK_STATUS_CHANGED.format(
-        homework['homework_name'], HOMEWORK_VERDICTS.get(
-            current_status)
+        homework['homework_name'], HOMEWORK_VERDICTS.get(current_status)
     )
 
 
 def main() -> None:
     """Основная логика работы бота."""
     check_tokens()
+    logging.debug(check_tokens())
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     previous_error = ''
@@ -122,14 +120,13 @@ def main() -> None:
             homeworks = check_response(request)
             if homeworks:
                 homework_verdict = parse_status(homeworks[0])
-                if send_message(bot=bot, message=homework_verdict) is True:
+                if send_message(bot=bot, message=homework_verdict):
                     timestamp = request.get('current_date', timestamp)
-                    logging.debug(f'Время {timestamp}')
         except Exception as error:
             message = LAST_FRONTIER_ERROR_MESSAGE.format(error)
             logging.error(message)
             if str(previous_error) != error:
-                if send_message(bot=bot, message=message) is True:
+                if send_message(bot=bot, message=message):
                     previous_error = error
         finally:
             time.sleep(RETRY_PERIOD)

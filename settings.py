@@ -12,8 +12,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 ALL_TOKENS_WAS_RECEIVED = 'Все токены успешно получены'
 ABSENCE_ENVIRONMENT_VARIABLES = '''
-    Отсутствие переменных окружения.
-    Пробущен токен: {missing_token}
+    'Пропущенные токены {}'
 '''
 
 ERROR_ENVIRONMENT_VARIABLES = 'Ошибка переменных окружения {}'
@@ -41,11 +40,11 @@ UNKNOW_HOMEWORK_STATUS = 'Неизвестный статус домашки {}'
 INVALIDJSON = 'Произошла ошибка JSON: {}'
 NEW_CHECK_HOMEWORK = 'Проверено новых домашек: {}'
 LAST_FRONTIER_ERROR_MESSAGE = 'Сбой в работе программы: {}'
-TOKENS = (
-    ('PRACTICUM_TOKEN', PRACTICUM_TOKEN),
-    ('TELEGRAM_TOKEN', TELEGRAM_TOKEN),
-    ('TELEGRAM_CHAT_ID', TELEGRAM_CHAT_ID),
-)
+TOKENS = {
+    'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+    'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+    'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
+}
 JSON_ERROR = '''
     'Ошибка в json: {error}
     Ключ: {key}
