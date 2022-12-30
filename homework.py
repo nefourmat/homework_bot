@@ -30,10 +30,10 @@ def check_tokens() -> bool:
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
         'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
     }
-    miss = [name for name, v in tokens.items() if not v]
-    if miss:
-        logging.critical(ABSENCE_ENVIRONMENT_VARIABLES.format(miss))
-        raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES.format(miss))
+    missing_tokens = [name for name, v in tokens.items() if not v]
+    if missing_tokens:
+        logging.critical(ABSENCE_ENVIRONMENT_VARIABLES.format(missing_tokens))
+        raise InvalidTokens(ERROR_ENVIRONMENT_VARIABLES.format(missing_tokens))
     logging.debug(ALL_TOKENS_WAS_RECEIVED)
 
 
